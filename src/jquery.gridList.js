@@ -23,20 +23,31 @@
 
     defaults: {
       lanes: 5,
-      direction: "horizontal",
-      itemSelector: 'li[data-w]',
+      direction: "vertical",
+      itemSelector: 'div[data-w]',
       widthHeightRatio: 1,
-      dragAndDrop: true
+      scroll: true,
+      dragAndDrop: false
     },
 
     draggableDefaults: {
       zIndex: 2,
-      scroll: false,
+      scroll: true,
       containment: "parent"
     },
 
     destroy: function() {
       this._unbindEvents();
+    },
+
+    updateLanes: function(lanes) {
+      if (lanes) {
+        this.options.lanes = lanes;
+      }
+      this._createGridSnapshot();
+      this.gridList.resizeGrid(this.options.lanes);
+      this._updateGridSnapshot();
+      this.render();
     },
 
     resize: function(lanes) {
@@ -87,6 +98,15 @@
       };
     },
 
+    getTallest: function(){
+      return this._tallestItem.height;
+    },
+    _refresh: function(){
+      this.gridList._resolveCollisions();
+    
+      console.log('Grid refreshed!');
+    },
+    
     _init: function() {
       // Read items and their meta data. Ignore other list elements (like the
       // position highlight)
@@ -134,6 +154,30 @@
       this.$items.off('dragstop', this._onStop);
     },
 
+    _expandGrid : function(action){
+      // Update the width of the entire grid container with enough room on the
+      // right to allow dragging items to the end of the grid.
+      if (this.options.direction === "horizontal") {
+        this.$element.width(
+          (this.gridList.grid.length + this._widestItem) * this._cellWidth);
+      } else {
+        this.$element.height(
+          (this.gridList.grid.length + this._tallestItem) * this._cellHeight); 
+      }
+    },
+    
+    _retractGrid : function(action){
+      // Update the width of the entire grid container with enough room on the
+      // right to allow dragging items to the end of the grid.
+      if (this.options.direction === "horizontal") {
+        this.$element.width(
+          ((this.gridList.grid.length) * this._cellWidth) + 20) ;
+      } else {
+        this.$element.height(
+          (this.gridList.grid.length) * this._cellHeight);
+      }
+    },
+
     _onStart: function(event, ui) {
       // Create a deep copy of the items; we use them to revert the item
       // positions after each drag change, making an entire drag operation less
@@ -175,6 +219,9 @@
       // HACK: jQuery.draggable removes this class after the dragstop callback,
       // and we need it removed before the drop, to re-enable CSS transitions
       $(ui.helper).removeClass('ui-draggable-dragging');
+      
+      this._createGridSnapshot();
+      this._updateGridSnapshot();
 
       this._applyPositionToItems();
       this._removePositionHighlight();
@@ -218,7 +265,7 @@
       if (this.options.direction === "horizontal") {
         this._cellHeight = Math.floor(this.$element.height() / this.options.lanes);
         this._cellWidth = this._cellHeight * this.options.widthHeightRatio;
-      } else {
+      } else if(this.options.direction === "vertical") {
         this._cellWidth = Math.floor(this.$element.width() / this.options.lanes);
         this._cellHeight = this._cellWidth / this.options.widthHeightRatio;
       }
@@ -261,13 +308,17 @@
       }
       // Update the width of the entire grid container with enough room on the
       // right to allow dragging items to the end of the grid.
-      if (this.options.direction === "horizontal") {
-        this.$element.width(
-          (this.gridList.grid.length + this._widestItem) * this._cellWidth);
-      } else {
-        this.$element.height(
-          (this.gridList.grid.length + this._tallestItem) * this._cellHeight);
+      if(gridController.editLayoutTracker) {
+        if (this.options.direction === "horizontal") {
+          this.$element.width(
+            (this.gridList.grid.length + this._widestItem) * this._cellWidth);
+        } else {
+          this.$element.height(
+            (this.gridList.grid.length + this._tallestItem) * this._cellHeight);
+          }
+        }
       }
+
     },
 
     _dragPositionChanged: function(newPosition) {
