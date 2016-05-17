@@ -317,7 +317,6 @@
             (this.gridList.grid.length + this._tallestItem) * this._cellHeight);
           }
         }
-      }
 
     },
 
